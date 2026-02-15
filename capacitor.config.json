@@ -1,0 +1,11 @@
+{
+  "appId": "com.saham.scout2026",
+  "appName": "جوالة صحم",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
