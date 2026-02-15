@@ -37,28 +37,40 @@
         background: transparent;
       }
       
+      /* Print Styles Strategy: Hide App (#root), Show Portal */
       @media print {
         @page { size: A4 portrait; margin: 10mm; }
         
-        html, body { 
-            background-color: white; 
-            -webkit-print-color-adjust: exact; 
-            margin: 0; 
-            padding: 0;
-            overflow: visible !important; 
-            height: auto !important; 
-            width: auto !important;
+        body, html {
+            height: auto !important;
+            overflow: visible !important;
+            background-color: white !important;
         }
-        
-        #root { display: none; }
+
+        /* Hide the main application */
+        #root { 
+            display: none !important; 
+        }
+
+        /* Ensure the print portal is visible and formatted correctly */
+        .print-portal-container {
+            display: block !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            z-index: 99999 !important;
+            background: white !important;
+            overflow: visible !important;
+        }
+
+        /* Table Optimization */
+        table { width: 100%; border-collapse: collapse; }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; page-break-inside: avoid; }
         
         .no-print { display: none !important; }
-        .print-only { display: block !important; width: 100%; }
-        
-        /* Table Printing Optimization */
-        table { width: 100%; border-collapse: collapse; }
-        thead { display: table-header-group; } /* Repeats header on new pages */
-        tr { break-inside: avoid; page-break-inside: avoid; } /* Prevents cutting rows */
       }
     </style>
   <script type="importmap">
@@ -69,7 +81,8 @@
     "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4"
   }
 }
 </script>
