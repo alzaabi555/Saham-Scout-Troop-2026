@@ -1,0 +1,71 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web App
+        run: npm run build
+
+      - name: Setup Capacitor iOS
+        run: |
+          npx cap add ios
+          npx cap sync
+
+      - name: Generate Assets (Icons)
+        # This will run only if you have uploaded a 'resources' folder with icon.png
+        run: |
+          if [ -d "resources" ]; then
+            npx capacitor-assets generate --ios
+          else
+            echo "No resources folder found, skipping icon generation."
+          fi
+
+      - name: Build IPA (Unsigned)
+        run: |
+          cd ios
+          # Create the build directory
+          mkdir -p build
+          
+          # Build the project using xcodebuild (No signing required for payload method)
+          xcodebuild archive \
+            -workspace App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+          # Create IPA structure manually (Payload method)
+          mkdir -p Payload
+          cp -R build/App.xcarchive/Products/Applications/App.app Payload/
+          
+          # Zip it to create .ipa
+          zip -r SahamScout.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SahamScout-IPA
+          path: ios/SahamScout.ipa
