@@ -20,6 +20,8 @@ export interface MeetingSession {
 
 export interface AppSettings {
   leaderName: string;
+  coordinatorName: string;
+  secretaryName: string;
   troopName: string;
   logoUrl: string | null;
 }

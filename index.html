@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
-    <title>فرقة جوالة صحم 2026</title>
+    <title>عشيرة جوالة صحم 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
       
@@ -37,10 +38,27 @@
       }
       
       @media print {
-        @page { size: A4 landscape; margin: 0; }
-        body { background-color: white; -webkit-print-color-adjust: exact; margin: 0; overflow: visible; height: auto; }
+        @page { size: A4 portrait; margin: 10mm; }
+        
+        html, body { 
+            background-color: white; 
+            -webkit-print-color-adjust: exact; 
+            margin: 0; 
+            padding: 0;
+            overflow: visible !important; 
+            height: auto !important; 
+            width: auto !important;
+        }
+        
+        #root { display: none; }
+        
         .no-print { display: none !important; }
-        .print-only { display: block !important; }
+        .print-only { display: block !important; width: 100%; }
+        
+        /* Table Printing Optimization */
+        table { width: 100%; border-collapse: collapse; }
+        thead { display: table-header-group; } /* Repeats header on new pages */
+        tr { break-inside: avoid; page-break-inside: avoid; } /* Prevents cutting rows */
       }
     </style>
   <script type="importmap">
