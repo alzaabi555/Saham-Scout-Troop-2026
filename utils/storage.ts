@@ -8,7 +8,9 @@ const KEYS = {
 
 const defaultSettings: AppSettings = {
   leaderName: 'القائد',
-  troopName: 'فرقة جوالة صحم 2026',
+  coordinatorName: '',
+  secretaryName: '',
+  troopName: 'عشيرة جوالة صحم 2026',
   logoUrl: null,
 };
 

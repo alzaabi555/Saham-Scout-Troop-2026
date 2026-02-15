@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Save, Upload, User, Flag, Trash2, Download, FileJson, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Save, Upload, User, Flag, Trash2, Download, FileJson, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 import { AppSettings } from '../types';
 import { Storage } from '../utils/storage';
 
@@ -142,7 +142,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSaveSettings, onDataRes
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">اسم الفرقة</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">اسم العشيرة</label>
           <div className="relative">
              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <Flag className="h-5 w-5 text-stone-400" />
@@ -171,6 +171,23 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSaveSettings, onDataRes
                 onChange={handleChange}
                 className="block w-full pr-10 pl-3 py-2 border border-stone-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1"> منسق العشيرةوأمين السر</label>
+          <div className="relative">
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <Users className="h-5 w-5 text-stone-400" />
+            </div>
+            <input
+                type="text"
+                name="coordinatorName"
+                value={formData.coordinatorName || ''}
+                onChange={handleChange}
+                className="block w-full pr-10 pl-3 py-2 border border-stone-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                placeholder="الاسم الثلاثي"
             />
           </div>
         </div>
