@@ -3,92 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
     <title>عشيرة جوالة صحم 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
-      
-      :root {
-        --sat: env(safe-area-inset-top, 20px);
-        --sab: env(safe-area-inset-bottom, 20px);
-      }
-
       body {
         font-family: 'Tajawal', sans-serif;
-        -webkit-user-select: none;
-        user-select: none;
-        -webkit-tap-highlight-color: transparent;
         background-color: #fafaf9;
-        overscroll-behavior-y: none;
         height: 100vh;
-        width: 100vw;
         overflow: hidden;
       }
-
-      input, textarea {
-        -webkit-user-select: text;
-        user-select: text;
+      /* تحسين العرض على آيفون */
+      .print-portal-container {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        -webkit-overflow-scrolling: touch;
       }
-
-      ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-      }
-      
-      /* Print Styles Strategy: Hide App (#root), Show Portal */
       @media print {
         @page { size: A4 portrait; margin: 10mm; }
-        
-        body, html {
-            height: auto !important;
-            overflow: visible !important;
-            background-color: white !important;
-        }
-
-        /* Hide the main application */
-        #root { 
-            display: none !important; 
-        }
-
-        /* Ensure the print portal is visible and formatted correctly */
-        .print-portal-container {
-            display: block !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            z-index: 99999 !important;
-            background: white !important;
-            overflow: visible !important;
-        }
-
-        /* Table Optimization */
-        table { width: 100%; border-collapse: collapse; }
-        thead { display: table-header-group; }
-        tr { break-inside: avoid; page-break-inside: avoid; }
-        
+        #root { display: none !important; }
         .no-print { display: none !important; }
+        .print-portal-container { position: relative !important; display: block !important; }
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4",
-    "react-dom": "https://esm.sh/react-dom@^19.2.4"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
-  <body class="bg-stone-50 text-stone-900 h-screen overflow-hidden selection:bg-blue-200">
+  </head>
+  <body class="bg-stone-50 text-stone-900 h-screen overflow-hidden">
     <div id="root" class="h-full w-full"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
