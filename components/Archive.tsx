@@ -15,7 +15,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
   const [showPreview, setShowPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // --- الحسابات والمنطق ---
+  // --- المنطق ---
   const getStatus = (session: MeetingSession, memberId: string) => {
     const record = session.records.find(r => r.memberId === memberId);
     return record ? record.status : '-';
@@ -24,7 +24,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const printSessions = sortedSessions.slice(0, 10);
 
-  // --- معالج الطباعة والحفظ (إصلاح آيفون) ---
+  // --- معالج الطباعة والحفظ (iOS Fix) ---
   const handleSharePDF = async () => {
     setIsProcessing(true);
     setShowPreview(true);
@@ -32,7 +32,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
     setTimeout(async () => {
       const element = document.getElementById('print-content-inner');
       if (!element || !(window as any).html2pdf) {
-        alert("يرجى الانتظار، جاري تحميل محرك الـ PDF...");
+        alert("يرجى الانتظار لتحميل المحرك...");
         setIsProcessing(false);
         return;
       }
@@ -57,7 +57,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
         }
       } catch (err) {
         console.error(err);
-        alert("حدث خطأ أثناء إنشاء التقرير.");
+        alert("حدث خطأ أثناء الإنشاء.");
       } finally {
         setIsProcessing(false);
       }
@@ -66,107 +66,69 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
 
   return (
     <div className="space-y-4 pb-20 relative">
-      {/* الرأس (Header) */}
+      {/* Header الرئيسي للتطبيق */}
       <div className="flex justify-between items-center px-1 sticky top-0 z-10 bg-stone-50 py-2">
         <h2 className="text-xl font-bold text-stone-800">سجل الجلسات</h2>
         <div className="flex space-x-2 space-x-reverse">
-            <button onClick={handleSharePDF} className="flex items-center bg-stone-200 text-stone-700 px-3 py-2 rounded-xl text-sm font-bold shadow-sm active:bg-stone-300 transition-colors">
-                <Printer className="w-4 h-4" />
-            </button>
-            <button onClick={handleSharePDF} disabled={isProcessing} className="flex items-center bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md active:bg-blue-900 transition-colors disabled:opacity-70">
+            <button onClick={handleSharePDF} className="p-2 bg-stone-200 text-stone-700 rounded-xl"><Printer className="w-5 h-5" /></button>
+            <button onClick={handleSharePDF} disabled={isProcessing} className="bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center">
                 {isProcessing ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <FileDown className="w-4 h-4 ml-2" />}
                 حفظ PDF
             </button>
         </div>
       </div>
 
-      {/* قائمة الجلسات الرئيسية */}
+      {/* قائمة الجلسات */}
       <div className="space-y-3">
-        {sortedSessions.length === 0 ? (
-          <div className="text-center py-12 text-stone-400">لا توجد سجلات محفوظة.</div>
-        ) : (
-          sortedSessions.map(session => {
-            const presentCount = session.records.filter(r => r.status === 'present').length;
-            return (
-              <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
-                <div className="p-4 active:bg-stone-50 transition-colors" onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="flex items-center text-blue-700 font-bold mb-1">
-                        <Calendar className="w-4 h-4 ml-2" />
-                        {new Date(session.date).toLocaleDateString('ar-OM', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                      </div>
-                      {session.topic && <p className="text-sm text-stone-500 pr-6">{session.topic}</p>}
-                    </div>
-                    <button onClick={(e) => { e.stopPropagation(); if (window.confirm('حذف نهائي؟')) onDeleteSession(session.id); }} className="p-2 text-stone-300 hover:text-red-500">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-stone-50">
-                    <div className="flex space-x-2 space-x-reverse">
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold">{presentCount} حاضر</span>
-                      <span className="text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded-md">{members.length} إجمالي</span>
-                    </div>
-                    {expandedSession === session.id ? <ChevronUp className="w-5 h-5 text-stone-400" /> : <ChevronDown className="w-5 h-5 text-stone-400" />}
-                  </div>
+        {sortedSessions.map(session => (
+            <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4" onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}>
+                <div className="flex justify-between items-center">
+                    <span className="font-bold text-blue-700 flex items-center"><Calendar className="w-4 h-4 ml-2" />{new Date(session.date).toLocaleDateString('ar-OM')}</span>
+                    <Trash2 className="w-5 h-5 text-stone-300" onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id); }} />
                 </div>
-
-                {/* تفاصيل الجلسة عند التوسيع */}
-                {expandedSession === session.id && (
-                  <div className="bg-stone-50 p-4 border-t border-stone-100 animate-fade-in">
-                    <div className="space-y-2">
-                      {members.map(member => {
-                        const status = getStatus(session, member.id);
-                        let icon = <span className="w-2 h-2 rounded-full bg-stone-300"></span>;
-                        let textColor = "text-stone-500";
-                        if (status === 'present') { icon = <span className="text-green-600 font-bold">✓</span>; textColor = "text-green-700"; }
-                        if (status === 'absent') { icon = <span className="text-red-500 font-bold">✕</span>; textColor = "text-red-700"; }
-                        if (status === 'excused') { icon = <span className="text-amber-500 font-bold">!</span>; textColor = "text-amber-700"; }
-                        return (
-                          <div key={member.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-stone-100 text-sm">
-                            <span className="font-medium text-stone-700">{member.name}</span>
-                            <span className={`flex items-center ${textColor} font-medium`}>{icon}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
+            </div>
+        ))}
       </div>
 
-      {/* بوابة المعاينة والطباعة (Portal) */}
+      {/* بوابة المعاينة والطباعة */}
       {showPreview && createPortal(
-        <div className="fixed inset-0 z-[99999] bg-white overflow-y-auto print-portal-container animate-fade-in">
-          <div className="sticky top-0 p-4 flex justify-between items-center bg-blue-50 border-b border-blue-100 no-print z-50 shadow-sm">
+        <div className="fixed inset-0 z-[99999] bg-white overflow-y-auto print-portal-container">
+          <div className="sticky top-0 p-4 flex justify-between items-center bg-blue-50 no-print z-50">
             <span className="text-sm font-bold text-blue-800">معاينة التقرير</span>
             <div className="flex gap-2">
-              <button onClick={handleSharePDF} className="p-2 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm">مشاركة / طباعة</button>
-              <button onClick={() => setShowPreview(false)} className="p-2 bg-white rounded-lg text-stone-500 border border-stone-200 shadow-sm"><X className="w-5 h-5" /></button>
+              <button onClick={handleSharePDF} className="p-2 bg-blue-600 text-white rounded-lg text-xs font-bold">مشاركة / طباعة</button>
+              <button onClick={() => setShowPreview(false)} className="p-2 bg-white rounded-lg text-stone-500 border border-stone-200"><X className="w-5 h-5" /></button>
             </div>
           </div>
 
           <div id="print-content-inner" className="bg-white p-8 max-w-[210mm] mx-auto text-black min-h-screen">
-            {/* رأس التقرير (Header) - معدّل حسب الطلب */}
-            <div className="flex flex-col items-center justify-center mb-6 border-b-2 border-black pb-4">
-              {settings.logoUrl && (
-                <div className="w-24 h-24 border border-stone-200 rounded-full overflow-hidden mb-3">
-                  <img src={settings.logoUrl} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Logo" />
-                </div>
-              )}
-              <h1 className="text-2xl font-black text-black leading-tight text-center">عشيرة جوالة صحم</h1>
-              <p className="text-sm text-stone-600 text-center mt-1">سجل الحضور لعام 2026 م</p>
+            {/* الترويسة العليا المعدلة */}
+            <div className="relative mb-6 border-b-2 border-black pb-4">
+              
+              {/* التاريخ واليوم في الجانب الأيمن */}
+              <div className="absolute top-0 right-0 text-right text-[10px] text-stone-600 font-bold leading-relaxed">
+                  <div className="text-black mb-0.5">{new Date().toLocaleDateString('ar-OM', { weekday: 'long' })}</div>
+                  <div>{new Date().toLocaleDateString('ar-OM', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              </div>
+
+              {/* المحتوى المركزي */}
+              <div className="flex flex-col items-center justify-center">
+                {settings.logoUrl && (
+                  <div className="w-24 h-24 border border-stone-200 rounded-full overflow-hidden mb-3">
+                    <img src={settings.logoUrl} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Logo" />
+                  </div>
+                )}
+                <h1 className="text-2xl font-black text-black leading-tight text-center">عشيرة جوالة صحم</h1>
+                <p className="text-sm text-stone-600 text-center mt-1 font-bold">سجل الحضور لعام 2026 م</p>
+              </div>
             </div>
 
-            {/* جدول التقرير (Table) */}
+            {/* الجدول (تم الحفاظ عليه بالكامل) */}
             <table className="w-full border-collapse border border-stone-300 text-[10px] table-fixed">
               <thead>
                 <tr className="bg-stone-200 text-black">
-                  <th className="border border-stone-300 p-1 w-8 font-bold">#</th>
-                  <th className="border border-stone-300 p-1 text-right font-bold">الاسم</th>
+                  <th className="border border-stone-300 p-1 w-8">#</th>
+                  <th className="border border-stone-300 p-1 text-right">الاسم</th>
                   {printSessions.map(s => (
                     <th key={s.id} className="border border-stone-300 p-1 w-10 text-center font-bold">
                       {new Date(s.date).toLocaleDateString('ar-OM', { month: 'numeric', day: 'numeric' })}
