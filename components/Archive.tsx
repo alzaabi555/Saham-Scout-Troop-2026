@@ -22,7 +22,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
   };
 
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const printSessions = sortedSessions.slice(0, 10); // تحديد آخر 10 جلسات للتقرير
+  const printSessions = sortedSessions.slice(0, 10);
 
   // --- معالج الطباعة والحفظ (إصلاح آيفون) ---
   const handleSharePDF = async () => {
@@ -150,23 +150,15 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
           </div>
 
           <div id="print-content-inner" className="bg-white p-8 max-w-[210mm] mx-auto text-black min-h-screen">
-            {/* رأس التقرير (Header) */}
-            <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
-              <div className="text-right">
-                <h2 className="text-[12px] font-bold text-stone-600 mb-1">سلطنة عمان</h2>
-                <h1 className="text-xl font-black text-black leading-tight mb-1">{settings.troopName}</h1>
-                <p className="text-[10px] text-stone-600">سجل الحضور لعام 2026</p>
-              </div>
+            {/* رأس التقرير (Header) - معدّل حسب الطلب */}
+            <div className="flex flex-col items-center justify-center mb-6 border-b-2 border-black pb-4">
               {settings.logoUrl && (
-                <div className="w-20 h-20 border border-stone-200 rounded-full overflow-hidden mx-4">
+                <div className="w-24 h-24 border border-stone-200 rounded-full overflow-hidden mb-3">
                   <img src={settings.logoUrl} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Logo" />
                 </div>
               )}
-              <div className="text-left">
-                <div className="text-[10px] font-bold text-stone-500">القائد المسؤول</div>
-                <div className="text-[14px] font-bold text-black">{settings.leaderName}</div>
-                <div className="text-[10px] text-stone-500 mt-1">{new Date().toLocaleDateString('ar-OM')}</div>
-              </div>
+              <h1 className="text-2xl font-black text-black leading-tight text-center">عشيرة جوالة صحم</h1>
+              <p className="text-sm text-stone-600 text-center mt-1">سجل الحضور لعام 2026 م</p>
             </div>
 
             {/* جدول التقرير (Table) */}
