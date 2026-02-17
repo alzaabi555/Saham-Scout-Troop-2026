@@ -1,7 +1,8 @@
-import { Member, MeetingSession, AppSettings } from '../types';
+import { Member, MeetingSession, AppSettings, Group } from '../types';
 
 const KEYS = {
   MEMBERS: 'saham_scout_members',
+  GROUPS: 'saham_scout_groups',
   SESSIONS: 'saham_scout_sessions',
   SETTINGS: 'saham_scout_settings',
 };
@@ -10,7 +11,7 @@ const defaultSettings: AppSettings = {
   leaderName: 'القائد',
   coordinatorName: '',
   secretaryName: '',
-  troopName: 'عشيرة جوالة صحم 2026',
+  troopName: 'فرقة جوالة صحم 2026',
   logoUrl: null,
 };
 
@@ -26,6 +27,19 @@ export const Storage = {
   
   saveMembers: (members: Member[]) => {
     localStorage.setItem(KEYS.MEMBERS, JSON.stringify(members));
+  },
+
+  getGroups: (): Group[] => {
+    try {
+      const data = localStorage.getItem(KEYS.GROUPS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveGroups: (groups: Group[]) => {
+    localStorage.setItem(KEYS.GROUPS, JSON.stringify(groups));
   },
 
   getSessions: (): MeetingSession[] => {
@@ -44,7 +58,6 @@ export const Storage = {
   getSettings: (): AppSettings => {
     try {
       const data = localStorage.getItem(KEYS.SETTINGS);
-      // Merge with default settings to ensure new fields are covered
       return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
     } catch {
       return defaultSettings;
@@ -59,9 +72,10 @@ export const Storage = {
 
   getFullBackup: () => {
     return {
-      version: '1.0',
+      version: '1.1', // Incremented version for groups support
       timestamp: new Date().toISOString(),
       members: Storage.getMembers(),
+      groups: Storage.getGroups(),
       sessions: Storage.getSessions(),
       settings: Storage.getSettings(),
     };
@@ -69,12 +83,14 @@ export const Storage = {
 
   restoreBackup: (backupData: any): boolean => {
     try {
-      // Basic validation
       if (!backupData || typeof backupData !== 'object') return false;
       
-      // Save data if it exists in the backup, otherwise keep existing or empty
       if (Array.isArray(backupData.members)) {
         Storage.saveMembers(backupData.members);
+      }
+
+      if (Array.isArray(backupData.groups)) {
+        Storage.saveGroups(backupData.groups);
       }
       
       if (Array.isArray(backupData.sessions)) {
@@ -94,6 +110,7 @@ export const Storage = {
 
   clearAllData: () => {
     localStorage.removeItem(KEYS.MEMBERS);
+    localStorage.removeItem(KEYS.GROUPS);
     localStorage.removeItem(KEYS.SESSIONS);
     localStorage.removeItem(KEYS.SETTINGS);
   }

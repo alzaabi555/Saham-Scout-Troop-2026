@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp, Trash2, Calendar, Printer, FileDown, Loader2, X } from 'lucide-react';
-import { Member, MeetingSession, AppSettings } from '../types';
+import { ChevronDown, ChevronUp, Trash2, Calendar, Printer, FileDown, Loader2, X, FileText } from 'lucide-react';
+import { Member, MeetingSession, AppSettings, Group } from '../types';
 
 interface ArchiveProps {
   sessions: MeetingSession[];
   members: Member[];
+  groups: Group[];
   settings: AppSettings;
   onDeleteSession: (sessionId: string) => void;
 }
 
-const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDeleteSession }) => {
+const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, onDeleteSession }) => {
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // New state to handle print mode (Single vs Summary)
+  const [printMode, setPrintMode] = useState<'summary' | 'single'>('summary');
+  const [targetSessionId, setTargetSessionId] = useState<string | null>(null);
 
   // --- المنطق ---
   const getStatus = (session: MeetingSession, memberId: string) => {
@@ -22,7 +27,38 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
   };
 
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const printSessions = sortedSessions.slice(0, 10);
+
+  // Determine which sessions to include in the print view
+  let sessionsToPrint: MeetingSession[] = [];
+  if (printMode === 'single' && targetSessionId) {
+      const target = sortedSessions.find(s => s.id === targetSessionId);
+      if (target) sessionsToPrint = [target];
+  } else {
+      sessionsToPrint = sortedSessions.slice(0, 10); // Limit to 10 for summary to fit page
+  }
+
+  // Filter members that are not in any group
+  const unassignedMembers = members.filter(m => !m.groupId);
+  
+  // Calculate total columns
+  const totalColumns = 2 + sessionsToPrint.length + 2;
+
+  let globalIndex = 0;
+
+  // --- Handlers ---
+
+  const handlePrintSummary = () => {
+      setPrintMode('summary');
+      setTargetSessionId(null);
+      handleSharePDF();
+  };
+
+  const handlePrintSingle = (e: React.MouseEvent, sessionId: string) => {
+      e.stopPropagation();
+      setPrintMode('single');
+      setTargetSessionId(sessionId);
+      handleSharePDF();
+  };
 
   // --- معالج الطباعة والحفظ المتوافق مع iOS ---
   const handleSharePDF = async () => {
@@ -60,19 +96,52 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
     }, 800);
   };
 
+  const renderMemberRows = (memberList: Member[]) => {
+      return memberList.map((m) => {
+          globalIndex++;
+          const presentCount = sessionsToPrint.filter(s => getStatus(s, m.id) === 'present').length;
+          // Calculate percentage based on displayed sessions
+          const percent = sessionsToPrint.length > 0 ? Math.round((presentCount / sessionsToPrint.length) * 100) : 0;
+          
+          return (
+            <tr key={m.id} className="odd:bg-white even:bg-stone-50" style={{ height: '24px' }}>
+              <td className="border border-stone-300 p-1 text-center font-bold text-[10px]">{globalIndex}</td>
+              <td className="border border-stone-300 px-2 py-1 font-bold text-black text-right text-[10px]">{m.name}</td>
+              {sessionsToPrint.map(s => (
+                  <td key={s.id} className="border border-stone-300 p-0 text-center font-bold text-[10px]">
+                    {getStatus(s, m.id) === 'present' ? '✓' : getStatus(s, m.id) === 'absent' ? '✕' : getStatus(s, m.id) === 'excused' ? 'ع' : '-'}
+                  </td>
+              ))}
+              <td className="border border-stone-300 p-1 text-center font-bold text-[10px]">{presentCount}</td>
+              <td className="border border-stone-300 p-1 text-center font-bold bg-stone-100 text-[10px]">{percent}%</td>
+            </tr>
+          );
+      });
+  };
+
+  // Determine Header Data (Date/Day)
+  let headerDate = new Date(); // Default to today for summary
+  let headerTitle = 'سجل الحضور العام 2026';
+
+  if (printMode === 'single' && sessionsToPrint.length > 0) {
+      headerDate = new Date(sessionsToPrint[0].date);
+      const topic = sessionsToPrint[0].topic;
+      headerTitle = topic ? `جلسة: ${topic}` : `سجل حضور جلسة ${headerDate.toLocaleDateString('ar-OM')}`;
+  }
+
   return (
     <div className="space-y-4 pb-20 relative">
-      {/* 
-          تعديل مسافة الأمان هنا للهيدر الرئيسي 
-          إضافة pt-[env(safe-area-inset-top)] لدفعه أسفل النتوش 
-      */}
-      <div className="flex justify-between items-center px-4 sticky top-0 z-10 bg-stone-50 pt-[env(safe-area-inset-top)] pb-3 border-b border-stone-100 shadow-sm">
+      {/* Top Header - Removed safe area padding here as it's handled by main Layout */}
+      <div className="flex justify-between items-center px-4 sticky top-0 z-10 bg-stone-50 pb-3 border-b border-stone-100 shadow-sm pt-3">
         <h2 className="text-xl font-bold text-stone-800">سجل الجلسات</h2>
         <div className="flex space-x-2 space-x-reverse">
-            <button onClick={handleSharePDF} className="p-2 bg-stone-200 text-stone-700 rounded-xl"><Printer className="w-5 h-5" /></button>
-            <button onClick={handleSharePDF} disabled={isProcessing} className="bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center">
-                {isProcessing ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <FileDown className="w-4 h-4 ml-2" />}
-                حفظ PDF
+            <button 
+                onClick={handlePrintSummary} 
+                disabled={isProcessing}
+                className="bg-blue-800 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center shadow-sm active:scale-95 transition-transform"
+            >
+                {isProcessing && printMode === 'summary' ? <Loader2 className="w-3 h-3 ml-1 animate-spin" /> : <Printer className="w-3 h-3 ml-1" />}
+                التقرير العام
             </button>
         </div>
       </div>
@@ -82,8 +151,31 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
         {sortedSessions.map(session => (
             <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4" onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}>
                 <div className="flex justify-between items-center">
-                    <span className="font-bold text-blue-700 flex items-center"><Calendar className="w-4 h-4 ml-2" />{new Date(session.date).toLocaleDateString('ar-OM')}</span>
-                    <Trash2 className="w-5 h-5 text-stone-300" onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id); }} />
+                    <div className="flex items-center gap-2">
+                         <span className="font-bold text-blue-700 flex items-center text-sm">
+                            <Calendar className="w-4 h-4 ml-2" />
+                            {new Date(session.date).toLocaleDateString('ar-OM')}
+                        </span>
+                        {session.topic && <span className="text-xs text-stone-400 truncate max-w-[100px] border-r border-stone-200 pr-2 mr-2">{session.topic}</span>}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        {/* Single Print Button */}
+                        <button 
+                            onClick={(e) => handlePrintSingle(e, session.id)}
+                            className="p-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            title="طباعة هذا اليوم فقط"
+                        >
+                            <FileText className="w-4 h-4" />
+                        </button>
+                        
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id); }}
+                            className="p-2 text-stone-300 hover:text-red-500 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
         ))}
@@ -92,11 +184,11 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
       {/* بوابة المعاينة والطباعة */}
       {showPreview && createPortal(
         <div className="fixed inset-0 z-[99999] bg-white overflow-y-auto">
-          {/* 
-              تعديل مسافة الأمان لشريط أدوات المعاينة 
-          */}
-          <div className="sticky top-0 p-4 pt-[env(safe-area-inset-top)] flex justify-between items-center bg-blue-50 border-b border-blue-100 no-print z-50">
-            <span className="text-sm font-bold text-blue-800">معاينة التقرير</span>
+          {/* شريط أدوات المعاينة - Safe Area is needed here because it's a Portal (full screen overlay) */}
+          <div className="sticky top-0 p-4 pt-[env(safe-area-inset-top,20px)] flex justify-between items-center bg-blue-50 border-b border-blue-100 no-print z-50">
+            <span className="text-sm font-bold text-blue-800">
+                {printMode === 'summary' ? 'معاينة التقرير العام' : 'معاينة تقرير الجلسة'}
+            </span>
             <div className="flex gap-2">
               <button onClick={handleSharePDF} className="p-2 bg-blue-600 text-white rounded-lg text-xs font-bold">مشاركة</button>
               <button onClick={() => setShowPreview(false)} className="p-2 bg-white rounded-lg text-stone-500 border border-stone-200"><X className="w-5 h-5" /></button>
@@ -104,33 +196,78 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
           </div>
 
           <div id="print-content-inner" className="bg-white p-8 max-w-[210mm] mx-auto text-black min-h-screen">
-            {/* الترويسة العليا (حسب طلبك: تاريخ يمين، شعار واسم في المنتصف) */}
-            <div className="relative mb-6 border-b-2 border-black pb-4">
-              <div className="absolute top-0 right-0 text-right text-[10px] text-stone-600 font-bold">
-                  <div className="text-black mb-0.5">{new Date().toLocaleDateString('ar-OM', { weekday: 'long' })}</div>
-                  <div>{new Date().toLocaleDateString('ar-OM', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              </div>
+            
+            {/* الترويسة العليا المعدلة */}
+            <div className="mb-6 border-b-2 border-black pb-4">
+               {/* الصف العلوي: الشعار */}
+               <div className="flex justify-center mb-2">
+                    {settings.logoUrl && (
+                        <div className="w-20 h-20 border border-stone-200 rounded-full overflow-hidden">
+                            <img src={settings.logoUrl} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Logo" />
+                        </div>
+                    )}
+               </div>
 
-              <div className="flex flex-col items-center justify-center">
-                {settings.logoUrl && (
-                  <div className="w-24 h-24 border border-stone-200 rounded-full overflow-hidden mb-3">
-                    <img src={settings.logoUrl} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Logo" />
-                  </div>
-                )}
-                <h1 className="text-2xl font-black text-black leading-tight">عشيرة جوالة صحم</h1>
-                <p className="text-sm text-stone-600 mt-1 font-bold">سجل الحضور لعام 2026 م</p>
-              </div>
+               {/* الصف الرئيسي: يوم - عنوان - تاريخ */}
+               <div className="flex items-end justify-between w-full">
+                    
+                    {/* اليمين: اليوم */}
+                    <div className="text-right w-1/4">
+                        <p className="text-[10px] text-stone-500 font-bold mb-1">اليوم</p>
+                        <p className="text-lg font-black text-black">
+                            {headerDate.toLocaleDateString('ar-OM', { weekday: 'long' })}
+                        </p>
+                    </div>
+
+                    {/* الوسط: العنوان */}
+                    <div className="text-center w-1/2 px-2">
+                        <h1 className="text-2xl font-black text-black leading-none mb-1">عشيرة جوالة صحم</h1>
+                        <p className="text-sm text-stone-600 font-bold mt-1">
+                            {headerTitle}
+                        </p>
+                    </div>
+
+                    {/* اليسار: التاريخ */}
+                    <div className="text-left w-1/4">
+                        <p className="text-[10px] text-stone-500 font-bold mb-1">التاريخ</p>
+                        <p className="text-lg font-black text-black dir-ltr">
+                             {headerDate.toLocaleDateString('ar-OM', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                        </p>
+                    </div>
+
+               </div>
             </div>
 
-            {/* الجدول والفوتر (بدون تغيير) */}
+            {/* الجدول والفوتر */}
             <table className="w-full border-collapse border border-stone-300 text-[10px] table-fixed">
               <thead>
                 <tr className="bg-stone-200 text-black">
-                  <th className="border border-stone-300 p-1 w-8">#</th>
-                  <th className="border border-stone-300 p-1 text-right">الاسم</th>
-                  {printSessions.map(s => (
-                    <th key={s.id} className="border border-stone-300 p-1 w-10 text-center font-bold">
-                      {new Date(s.date).toLocaleDateString('ar-OM', { month: 'numeric', day: 'numeric' })}
+                  <th className="border border-stone-300 p-1 w-8 text-center bg-stone-200">#</th>
+                  <th className="border border-stone-300 p-1 text-right bg-stone-200">الاسم</th>
+                  {sessionsToPrint.map(s => (
+                    <th key={s.id} className="border border-stone-300 p-0 w-10 text-center align-bottom">
+                       {printMode === 'summary' ? (
+                           <div className="flex flex-col items-center justify-end pb-1 h-32">
+                               {/* Topic */}
+                               {s.topic && (
+                                   <span className="text-[9px] font-bold rotate-[-90deg] whitespace-nowrap mb-2 origin-center text-blue-900 block w-4 truncate overflow-visible">
+                                       {s.topic.substring(0, 15)}
+                                   </span>
+                               )}
+                               
+                               {/* Day */}
+                               <span className="text-[9px] font-normal rotate-[-90deg] whitespace-nowrap mb-1 origin-center text-stone-600 block w-4">
+                                   {new Date(s.date).toLocaleDateString('ar-OM', { weekday: 'short' })}
+                               </span>
+                               
+                               {/* Date */}
+                               <span className="text-[8px] font-bold border-t border-stone-400 pt-0.5 w-full block">
+                                   {new Date(s.date).toLocaleDateString('ar-OM', { month: 'numeric', day: 'numeric' })}
+                               </span>
+                           </div>
+                       ) : (
+                           <div className="py-2">الحالة</div>
+                       )}
                     </th>
                   ))}
                   <th className="border border-stone-300 p-1 w-8 bg-stone-100">ح</th>
@@ -138,23 +275,34 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, settings, onDelete
                 </tr>
               </thead>
               <tbody>
-                {members.map((m, i) => {
-                  const presentCount = printSessions.filter(s => getStatus(s, m.id) === 'present').length;
-                  const percent = printSessions.length > 0 ? Math.round((presentCount / printSessions.length) * 100) : 0;
-                  return (
-                    <tr key={m.id} className="odd:bg-white even:bg-stone-50" style={{ height: '24px' }}>
-                      <td className="border border-stone-300 p-1 text-center font-bold">{i + 1}</td>
-                      <td className="border border-stone-300 px-2 py-1 font-bold text-black text-right">{m.name}</td>
-                      {printSessions.map(s => (
-                         <td key={s.id} className="border border-stone-300 p-0 text-center font-bold">
-                            {getStatus(s, m.id) === 'present' ? '✓' : getStatus(s, m.id) === 'absent' ? '✕' : getStatus(s, m.id) === 'excused' ? 'ع' : '-'}
-                         </td>
-                      ))}
-                      <td className="border border-stone-300 p-1 text-center font-bold">{presentCount}</td>
-                      <td className="border border-stone-300 p-1 text-center font-bold bg-stone-100">{percent}%</td>
-                    </tr>
-                  );
+                {/* 1. Loop through Groups */}
+                {groups.map(group => {
+                    const groupMembers = members.filter(m => m.groupId === group.id);
+                    if (groupMembers.length === 0) return null;
+
+                    return (
+                        <React.Fragment key={group.id}>
+                            <tr className="bg-stone-300 break-inside-avoid">
+                                <td colSpan={totalColumns} className="border border-stone-400 p-1 text-center font-bold text-stone-800 text-[11px]">
+                                    {group.name}
+                                </td>
+                            </tr>
+                            {renderMemberRows(groupMembers)}
+                        </React.Fragment>
+                    );
                 })}
+
+                {/* 2. Unassigned Members */}
+                {unassignedMembers.length > 0 && (
+                    <React.Fragment>
+                         <tr className="bg-stone-300 break-inside-avoid">
+                            <td colSpan={totalColumns} className="border border-stone-400 p-1 text-center font-bold text-stone-800 text-[11px]">
+                                غير منضمين لمجموعة
+                            </td>
+                        </tr>
+                        {renderMemberRows(unassignedMembers)}
+                    </React.Fragment>
+                )}
               </tbody>
             </table>
 

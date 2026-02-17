@@ -25,10 +25,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, setti
       <header 
         className="bg-blue-900 text-white shadow-md flex items-center justify-between no-print shrink-0 z-20"
         style={{ 
-          paddingTop: 'calc(var(--sat) + 1rem)', 
-          paddingBottom: '1rem',
-          paddingLeft: '1rem', 
-          paddingRight: '1rem' 
+          paddingTop: 'calc(env(safe-area-inset-top, 40px) + 16px)', 
+          paddingBottom: '16px',
+          paddingLeft: '16px', 
+          paddingRight: '16px' 
         }}
       >
         <div className="flex items-center space-x-3 space-x-reverse w-full">
@@ -50,7 +50,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, setti
       {/* Bottom Navigation Bar - Fixed with Safe Area Padding */}
       <nav 
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30 no-print"
-        style={{ paddingBottom: 'var(--sab)', height: 'calc(4rem + var(--sab))' }}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)', height: 'calc(4rem + env(safe-area-inset-bottom, 20px))' }}
       >
         <div className="flex justify-around items-center h-16 w-full">
           {navItems.map((item) => {
