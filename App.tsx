@@ -6,11 +6,12 @@ import Attendance from './components/Attendance';
 import Archive from './components/Archive';
 import Settings from './components/Settings';
 import { Storage } from './utils/storage';
-import { Member, MeetingSession, AppSettings } from './types';
+import { Member, MeetingSession, AppSettings, Group } from './types';
 
 function App() {
   const [currentTab, setCurrentTab] = useState('welcome');
   const [members, setMembers] = useState<Member[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [sessions, setSessions] = useState<MeetingSession[]>([]);
   const [settings, setSettings] = useState<AppSettings>(Storage.getSettings());
 
@@ -21,6 +22,7 @@ function App() {
 
   const loadData = () => {
     setMembers(Storage.getMembers());
+    setGroups(Storage.getGroups());
     setSessions(Storage.getSessions());
     setSettings(Storage.getSettings());
   };
@@ -29,6 +31,11 @@ function App() {
   const handleUpdateMembers = (newMembers: Member[]) => {
     setMembers(newMembers);
     Storage.saveMembers(newMembers);
+  };
+
+  const handleUpdateGroups = (newGroups: Group[]) => {
+    setGroups(newGroups);
+    Storage.saveGroups(newGroups);
   };
 
   const handleSaveSession = (newSession: MeetingSession) => {
@@ -48,10 +55,8 @@ function App() {
     Storage.saveSettings(newSettings);
   };
 
-  // Called after a backup file is imported
   const handleDataRestore = () => {
     loadData();
-    // Force a small UI feedback or navigation if needed, currently just refreshes state
   };
 
   // Router logic
@@ -60,11 +65,18 @@ function App() {
       case 'welcome':
         return <Welcome settings={settings} members={members} sessions={sessions} onNavigate={setCurrentTab} />;
       case 'members':
-        return <Members members={members} onUpdateMembers={handleUpdateMembers} />;
+        return (
+          <Members 
+            members={members} 
+            groups={groups}
+            onUpdateMembers={handleUpdateMembers} 
+            onUpdateGroups={handleUpdateGroups}
+          />
+        );
       case 'attendance':
-        return <Attendance members={members} onSaveSession={handleSaveSession} />;
+        return <Attendance members={members} groups={groups} onSaveSession={handleSaveSession} />;
       case 'archive':
-        return <Archive sessions={sessions} members={members} settings={settings} onDeleteSession={handleDeleteSession} />;
+        return <Archive sessions={sessions} members={members} groups={groups} settings={settings} onDeleteSession={handleDeleteSession} />;
       case 'settings':
         return <Settings settings={settings} onSaveSettings={handleUpdateSettings} onDataRestored={handleDataRestore} />;
       default:

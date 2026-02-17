@@ -1,7 +1,13 @@
+export interface Group {
+  id: string;
+  name: string;
+}
+
 export interface Member {
   id: string;
   name: string;
   joinDate: string;
+  groupId?: string; // Optional linkage to a group
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'excused';
