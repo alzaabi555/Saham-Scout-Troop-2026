@@ -149,7 +149,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
       {/* قائمة الجلسات */}
       <div className="px-3 space-y-3">
         {sortedSessions.map(session => (
-            <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4" onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}>
+            <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 cursor-pointer" onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}>
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                          <span className="font-bold text-blue-700 flex items-center text-sm">
@@ -175,8 +175,60 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
+                        
+                        <div className="text-stone-400 ml-1">
+                            {expandedSession === session.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </div>
                     </div>
                 </div>
+                
+                {expandedSession === session.id && (
+                    <div className="mt-4 pt-4 border-t border-stone-100 space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                            const present = session.records.filter(r => r.status === 'present').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
+                            const absent = session.records.filter(r => r.status === 'absent').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
+                            const excused = session.records.filter(r => r.status === 'excused').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
+
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {present.length > 0 && (
+                                        <div className="bg-green-50 rounded-xl p-3 border border-green-100">
+                                            <h4 className="text-sm font-bold text-green-800 mb-2 flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                                الحاضرين ({present.length})
+                                            </h4>
+                                            <ul className="text-xs text-green-900 space-y-1.5 pr-2 border-r-2 border-green-200">
+                                                {present.map((name, i) => <li key={i}>{name}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {absent.length > 0 && (
+                                        <div className="bg-red-50 rounded-xl p-3 border border-red-100">
+                                            <h4 className="text-sm font-bold text-red-800 mb-2 flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                                الغائبين ({absent.length})
+                                            </h4>
+                                            <ul className="text-xs text-red-900 space-y-1.5 pr-2 border-r-2 border-red-200">
+                                                {absent.map((name, i) => <li key={i}>{name}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {excused.length > 0 && (
+                                        <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                                            <h4 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                                المستأذنين ({excused.length})
+                                            </h4>
+                                            <ul className="text-xs text-amber-900 space-y-1.5 pr-2 border-r-2 border-amber-200">
+                                                {excused.map((name, i) => <li key={i}>{name}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
             </div>
         ))}
       </div>
@@ -239,78 +291,123 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
             </div>
 
             {/* الجدول والفوتر */}
-            <table className="w-full border-collapse border border-stone-300 text-[10px] table-fixed">
-              <thead>
-                <tr className="bg-stone-200 text-black">
-                  <th className="border border-stone-300 p-1 w-8 text-center bg-stone-200">#</th>
-                  <th className="border border-stone-300 p-1 text-right bg-stone-200">الاسم</th>
-                  {sessionsToPrint.map(s => (
-                    <th key={s.id} className="border border-stone-300 p-0 w-10 text-center align-bottom">
-                       {printMode === 'summary' ? (
-                           <div className="flex flex-col items-center justify-end pb-1 h-32">
-                               {/* Topic */}
-                               {s.topic && (
-                                   <span className="text-[9px] font-bold rotate-[-90deg] whitespace-nowrap mb-2 origin-center text-blue-900 block w-4 truncate overflow-visible">
-                                       {s.topic.substring(0, 15)}
+            {printMode === 'summary' ? (
+              <>
+                <table className="w-full border-collapse border border-stone-300 text-[10px] table-fixed">
+                  <thead>
+                    <tr className="bg-stone-200 text-black">
+                      <th className="border border-stone-300 p-1 w-8 text-center bg-stone-200">#</th>
+                      <th className="border border-stone-300 p-1 text-right bg-stone-200">الاسم</th>
+                      {sessionsToPrint.map(s => (
+                        <th key={s.id} className="border border-stone-300 p-0 w-10 text-center align-bottom">
+                               <div className="flex flex-col items-center justify-end pb-1 h-32">
+                                   {/* Topic */}
+                                   {s.topic && (
+                                       <span className="text-[9px] font-bold rotate-[-90deg] whitespace-nowrap mb-2 origin-center text-blue-900 block w-4 truncate overflow-visible">
+                                           {s.topic.substring(0, 15)}
+                                       </span>
+                                   )}
+                                   
+                                   {/* Day */}
+                                   <span className="text-[9px] font-normal rotate-[-90deg] whitespace-nowrap mb-1 origin-center text-stone-600 block w-4">
+                                       {new Date(s.date).toLocaleDateString('ar-OM', { weekday: 'short' })}
                                    </span>
-                               )}
-                               
-                               {/* Day */}
-                               <span className="text-[9px] font-normal rotate-[-90deg] whitespace-nowrap mb-1 origin-center text-stone-600 block w-4">
-                                   {new Date(s.date).toLocaleDateString('ar-OM', { weekday: 'short' })}
-                               </span>
-                               
-                               {/* Date */}
-                               <span className="text-[8px] font-bold border-t border-stone-400 pt-0.5 w-full block">
-                                   {new Date(s.date).toLocaleDateString('ar-OM', { month: 'numeric', day: 'numeric' })}
-                               </span>
-                           </div>
-                       ) : (
-                           <div className="py-2">الحالة</div>
-                       )}
-                    </th>
-                  ))}
-                  <th className="border border-stone-300 p-1 w-8 bg-stone-100">ح</th>
-                  <th className="border border-stone-300 p-1 w-10 bg-stone-100">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* 1. Loop through Groups */}
-                {groups.map(group => {
-                    const groupMembers = members.filter(m => m.groupId === group.id);
-                    if (groupMembers.length === 0) return null;
+                                   
+                                   {/* Date */}
+                                   <span className="text-[8px] font-bold border-t border-stone-400 pt-0.5 w-full block">
+                                       {new Date(s.date).toLocaleDateString('ar-OM', { month: 'numeric', day: 'numeric' })}
+                                   </span>
+                               </div>
+                        </th>
+                      ))}
+                      <th className="border border-stone-300 p-1 w-8 bg-stone-100">ح</th>
+                      <th className="border border-stone-300 p-1 w-10 bg-stone-100">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* 1. Loop through Groups */}
+                    {groups.map(group => {
+                        const groupMembers = members.filter(m => m.groupId === group.id);
+                        if (groupMembers.length === 0) return null;
 
-                    return (
-                        <React.Fragment key={group.id}>
-                            <tr className="bg-stone-300 break-inside-avoid">
+                        return (
+                            <React.Fragment key={group.id}>
+                                <tr className="bg-stone-300 break-inside-avoid">
+                                    <td colSpan={totalColumns} className="border border-stone-400 p-1 text-center font-bold text-stone-800 text-[11px]">
+                                        {group.name}
+                                    </td>
+                                </tr>
+                                {renderMemberRows(groupMembers)}
+                            </React.Fragment>
+                        );
+                    })}
+
+                    {/* 2. Unassigned Members */}
+                    {unassignedMembers.length > 0 && (
+                        <React.Fragment>
+                             <tr className="bg-stone-300 break-inside-avoid">
                                 <td colSpan={totalColumns} className="border border-stone-400 p-1 text-center font-bold text-stone-800 text-[11px]">
-                                    {group.name}
+                                    غير منضمين لمجموعة
                                 </td>
                             </tr>
-                            {renderMemberRows(groupMembers)}
+                            {renderMemberRows(unassignedMembers)}
                         </React.Fragment>
-                    );
-                })}
+                    )}
+                  </tbody>
+                </table>
 
-                {/* 2. Unassigned Members */}
-                {unassignedMembers.length > 0 && (
-                    <React.Fragment>
-                         <tr className="bg-stone-300 break-inside-avoid">
-                            <td colSpan={totalColumns} className="border border-stone-400 p-1 text-center font-bold text-stone-800 text-[11px]">
-                                غير منضمين لمجموعة
-                            </td>
-                        </tr>
-                        {renderMemberRows(unassignedMembers)}
-                    </React.Fragment>
-                )}
-              </tbody>
-            </table>
+                <div className="mt-4 flex items-center gap-4 text-[10px] text-stone-600 border-t border-stone-200 pt-2">
+                  <div className="flex items-center"><span className="text-green-700 font-bold ml-1">✓</span> حاضر</div>
+                  <div className="flex items-center"><span className="text-red-600 font-bold ml-1">✕</span> غائب</div>
+                  <div className="flex items-center"><span className="text-amber-600 font-bold ml-1">ع</span> عذر</div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-6">
+                {(() => {
+                  const session = sessionsToPrint[0];
+                  if (!session) return null;
+                  
+                  const present = session.records.filter(r => r.status === 'present').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
+                  const absent = session.records.filter(r => r.status === 'absent').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
+                  const excused = session.records.filter(r => r.status === 'excused').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
 
-            <div className="mt-4 flex items-center gap-4 text-[10px] text-stone-600 border-t border-stone-200 pt-2">
-              <div className="flex items-center"><span className="text-green-700 font-bold ml-1">✓</span> حاضر</div>
-              <div className="flex items-center"><span className="text-red-600 font-bold ml-1">✕</span> غائب</div>
-              <div className="flex items-center"><span className="text-amber-600 font-bold ml-1">ع</span> عذر</div>
-            </div>
+                  return (
+                    <div className="grid grid-cols-3 gap-6">
+                      {/* Present */}
+                      <div className="border border-stone-300 rounded-lg overflow-hidden">
+                        <div className="bg-stone-200 p-2 text-center font-bold text-black border-b border-stone-300">
+                          الحاضرين ({present.length})
+                        </div>
+                        <ul className="p-4 space-y-2 text-sm">
+                          {present.map((name, i) => <li key={i} className="border-b border-stone-100 pb-1">{i + 1}. {name}</li>)}
+                        </ul>
+                      </div>
+                      
+                      {/* Absent */}
+                      <div className="border border-stone-300 rounded-lg overflow-hidden">
+                        <div className="bg-stone-200 p-2 text-center font-bold text-black border-b border-stone-300">
+                          الغائبين ({absent.length})
+                        </div>
+                        <ul className="p-4 space-y-2 text-sm">
+                          {absent.map((name, i) => <li key={i} className="border-b border-stone-100 pb-1">{i + 1}. {name}</li>)}
+                        </ul>
+                      </div>
+
+                      {/* Excused */}
+                      <div className="border border-stone-300 rounded-lg overflow-hidden">
+                        <div className="bg-stone-200 p-2 text-center font-bold text-black border-b border-stone-300">
+                          المستأذنين ({excused.length})
+                        </div>
+                        <ul className="p-4 space-y-2 text-sm">
+                          {excused.map((name, i) => <li key={i} className="border-b border-stone-100 pb-1">{i + 1}. {name}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-10 mt-12 px-4 text-center break-inside-avoid">
               <div className="flex flex-col items-center">
