@@ -192,36 +192,36 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                             return (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {present.length > 0 && (
-                                        <div className="bg-green-50 rounded-xl p-3 border border-green-100">
+                                        <div className="bg-green-50 rounded-xl p-3 border border-green-100 md:col-span-3">
                                             <h4 className="text-sm font-bold text-green-800 mb-2 flex items-center gap-1.5">
                                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                                 الحاضرين ({present.length})
                                             </h4>
-                                            <ul className="text-xs text-green-900 space-y-1.5 pr-2 border-r-2 border-green-200">
-                                                {present.map((name, i) => <li key={i}>{name}</li>)}
-                                            </ul>
+                                            <div className="text-xs text-green-900 pr-2 border-r-2 border-green-200 flex flex-wrap gap-2">
+                                                {present.map((name, i) => <span key={i} className="bg-green-100/50 border border-green-200 px-2 py-1 rounded-md">{name}</span>)}
+                                            </div>
                                         </div>
                                     )}
                                     {absent.length > 0 && (
-                                        <div className="bg-red-50 rounded-xl p-3 border border-red-100">
+                                        <div className="bg-red-50 rounded-xl p-3 border border-red-100 md:col-span-3">
                                             <h4 className="text-sm font-bold text-red-800 mb-2 flex items-center gap-1.5">
                                                 <span className="w-2 h-2 rounded-full bg-red-500"></span>
                                                 الغائبين ({absent.length})
                                             </h4>
-                                            <ul className="text-xs text-red-900 space-y-1.5 pr-2 border-r-2 border-red-200">
-                                                {absent.map((name, i) => <li key={i}>{name}</li>)}
-                                            </ul>
+                                            <div className="text-xs text-red-900 pr-2 border-r-2 border-red-200 flex flex-wrap gap-2">
+                                                {absent.map((name, i) => <span key={i} className="bg-red-100/50 border border-red-200 px-2 py-1 rounded-md">{name}</span>)}
+                                            </div>
                                         </div>
                                     )}
                                     {excused.length > 0 && (
-                                        <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                                        <div className="bg-amber-50 rounded-xl p-3 border border-amber-100 md:col-span-3">
                                             <h4 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-1.5">
                                                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                                                 المستأذنين ({excused.length})
                                             </h4>
-                                            <ul className="text-xs text-amber-900 space-y-1.5 pr-2 border-r-2 border-amber-200">
-                                                {excused.map((name, i) => <li key={i}>{name}</li>)}
-                                            </ul>
+                                            <div className="text-xs text-amber-900 pr-2 border-r-2 border-amber-200 flex flex-wrap gap-2">
+                                                {excused.map((name, i) => <span key={i} className="bg-amber-100/50 border border-amber-200 px-2 py-1 rounded-md">{name}</span>)}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -373,36 +373,45 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                   const excused = session.records.filter(r => r.status === 'excused').map(r => members.find(m => m.id === r.memberId)?.name).filter(Boolean);
 
                   return (
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="space-y-6">
                       {/* Present */}
-                      <div className="border border-stone-300 rounded-lg overflow-hidden">
-                        <div className="bg-stone-200 p-2 text-center font-bold text-black border-b border-stone-300">
-                          الحاضرين ({present.length})
-                        </div>
-                        <ul className="p-4 space-y-2 text-sm">
-                          {present.map((name, i) => <li key={i} className="border-b border-stone-100 pb-1">{i + 1}. {name}</li>)}
-                        </ul>
-                      </div>
+                      {present.length > 0 && (
+                          <div className="border border-stone-300 rounded-lg overflow-hidden">
+                            <div className="bg-stone-200 p-2 font-bold text-black border-b border-stone-300 flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                              الحاضرين ({present.length})
+                            </div>
+                            <div className="p-4 flex flex-wrap gap-2 text-sm">
+                              {present.map((name, i) => <span key={i} className="bg-stone-100 border border-stone-200 px-3 py-1.5 rounded-lg">{name}</span>)}
+                            </div>
+                          </div>
+                      )}
                       
                       {/* Absent */}
-                      <div className="border border-stone-300 rounded-lg overflow-hidden">
-                        <div className="bg-stone-200 p-2 text-center font-bold text-black border-b border-stone-300">
-                          الغائبين ({absent.length})
-                        </div>
-                        <ul className="p-4 space-y-2 text-sm">
-                          {absent.map((name, i) => <li key={i} className="border-b border-stone-100 pb-1">{i + 1}. {name}</li>)}
-                        </ul>
-                      </div>
+                      {absent.length > 0 && (
+                          <div className="border border-stone-300 rounded-lg overflow-hidden">
+                            <div className="bg-stone-200 p-2 font-bold text-black border-b border-stone-300 flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                              الغائبين ({absent.length})
+                            </div>
+                            <div className="p-4 flex flex-wrap gap-2 text-sm">
+                              {absent.map((name, i) => <span key={i} className="bg-stone-100 border border-stone-200 px-3 py-1.5 rounded-lg">{name}</span>)}
+                            </div>
+                          </div>
+                      )}
 
                       {/* Excused */}
-                      <div className="border border-stone-300 rounded-lg overflow-hidden">
-                        <div className="bg-stone-200 p-2 text-center font-bold text-black border-b border-stone-300">
-                          المستأذنين ({excused.length})
-                        </div>
-                        <ul className="p-4 space-y-2 text-sm">
-                          {excused.map((name, i) => <li key={i} className="border-b border-stone-100 pb-1">{i + 1}. {name}</li>)}
-                        </ul>
-                      </div>
+                      {excused.length > 0 && (
+                          <div className="border border-stone-300 rounded-lg overflow-hidden">
+                            <div className="bg-stone-200 p-2 font-bold text-black border-b border-stone-300 flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                              المستأذنين ({excused.length})
+                            </div>
+                            <div className="p-4 flex flex-wrap gap-2 text-sm">
+                              {excused.map((name, i) => <span key={i} className="bg-stone-100 border border-stone-200 px-3 py-1.5 rounded-lg">{name}</span>)}
+                            </div>
+                          </div>
+                      )}
                     </div>
                   );
                 })()}

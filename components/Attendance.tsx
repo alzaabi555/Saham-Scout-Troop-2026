@@ -15,17 +15,28 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [step, setStep] = useState<'details' | 'list'>('details');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [isGroupExpanded, setIsGroupExpanded] = useState<Record<string, boolean>>({});
 
-  // Initialize attendance with 'present' for all
+  // Initialize selectedMembers with all members initially
+  useEffect(() => {
+    setSelectedMembers(members.map(m => m.id));
+  }, [members]);
+
+  // Initialize attendance with 'present' for selected members
   useEffect(() => {
     setAttendance(prev => {
         const next = { ...prev };
         members.forEach(m => {
-            if (!next[m.id]) next[m.id] = 'present'; 
+            if (selectedMembers.includes(m.id)) {
+                if (!next[m.id]) next[m.id] = 'present'; 
+            } else {
+                delete next[m.id];
+            }
         });
         return next;
     });
-  }, [members]);
+  }, [members, selectedMembers]);
 
   const handleStatusChange = (memberId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [memberId]: status }));
@@ -34,6 +45,29 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
   const toggleGroupCollapse = (groupId: string) => {
       setCollapsedGroups(prev => ({...prev, [groupId]: !prev[groupId]}));
   };
+
+  const toggleGroupSelectionExpand = (groupId: string) => {
+      setIsGroupExpanded(prev => ({...prev, [groupId]: !prev[groupId]}));
+  };
+
+  const handleSelectGroupMembers = (groupId: string, isSelected: boolean) => {
+      const groupMemberIds = members.filter(m => (m.groupId || 'unassigned') === groupId).map(m => m.id);
+      if (isSelected) {
+          setSelectedMembers(prev => Array.from(new Set([...prev, ...groupMemberIds])));
+      } else {
+          setSelectedMembers(prev => prev.filter(id => !groupMemberIds.includes(id)));
+      }
+  };
+
+  const handleSelectMember = (memberId: string, isSelected: boolean) => {
+      if (isSelected) {
+          setSelectedMembers(prev => [...prev, memberId]);
+      } else {
+          setSelectedMembers(prev => prev.filter(id => id !== memberId));
+      }
+  };
+
+  const unassignedMembers = members.filter(m => !m.groupId);
 
   const handleSave = () => {
     const records: AttendanceRecord[] = Object.entries(attendance).map(([memberId, status]) => ({
@@ -90,11 +124,109 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
                         className="w-full p-4 bg-stone-50 border-none rounded-xl text-lg outline-none focus:ring-2 focus:ring-blue-500"
                       />
                   </div>
+                  <div>
+                      <label className="block text-sm font-bold text-stone-700 mb-2 mt-4">الأعضاء المشاركين</label>
+                      <div className="space-y-3">
+                          {groups.map(group => {
+                              const groupMembers = members.filter(m => m.groupId === group.id);
+                              if (groupMembers.length === 0) return null;
+                              
+                              const isGroupSelected = groupMembers.every(m => selectedMembers.includes(m.id));
+                              const isGroupPartiallySelected = groupMembers.some(m => selectedMembers.includes(m.id)) && !isGroupSelected;
+                              const isExpanded = isGroupExpanded[group.id];
+
+                              return (
+                                  <div key={group.id} className="bg-stone-50 rounded-xl border border-stone-200 overflow-hidden">
+                                      <div className="flex items-center justify-between p-3 bg-stone-100 border-b border-stone-200">
+                                          <label className="flex items-center gap-3 cursor-pointer flex-1">
+                                              <input 
+                                                  type="checkbox" 
+                                                  checked={isGroupSelected}
+                                                  ref={input => { if (input) input.indeterminate = isGroupPartiallySelected; }}
+                                                  onChange={(e) => handleSelectGroupMembers(group.id, e.target.checked)}
+                                                  className="w-5 h-5 text-blue-600 rounded border-stone-300 focus:ring-blue-500"
+                                              />
+                                              <span className="font-bold text-stone-800">{group.name}</span>
+                                          </label>
+                                          <button 
+                                              onClick={() => toggleGroupSelectionExpand(group.id)}
+                                              className="p-1 text-stone-500 hover:bg-stone-200 rounded-md"
+                                          >
+                                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                          </button>
+                                      </div>
+                                      
+                                      {isExpanded && (
+                                          <div className="p-2 space-y-1 bg-white">
+                                              {groupMembers.map(member => (
+                                                  <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-stone-50 rounded-lg cursor-pointer">
+                                                      <input 
+                                                          type="checkbox" 
+                                                          checked={selectedMembers.includes(member.id)}
+                                                          onChange={(e) => handleSelectMember(member.id, e.target.checked)}
+                                                          className="w-4 h-4 text-blue-600 rounded border-stone-300 focus:ring-blue-500"
+                                                      />
+                                                      <span className="text-sm text-stone-700">{member.name}</span>
+                                                  </label>
+                                              ))}
+                                          </div>
+                                      )}
+                                  </div>
+                              );
+                          })}
+                          
+                          {unassignedMembers.length > 0 && (() => {
+                              const isGroupSelected = unassignedMembers.every(m => selectedMembers.includes(m.id));
+                              const isGroupPartiallySelected = unassignedMembers.some(m => selectedMembers.includes(m.id)) && !isGroupSelected;
+                              const isExpanded = isGroupExpanded['unassigned'];
+
+                              return (
+                                  <div className="bg-stone-50 rounded-xl border border-stone-200 overflow-hidden">
+                                      <div className="flex items-center justify-between p-3 bg-stone-100 border-b border-stone-200">
+                                          <label className="flex items-center gap-3 cursor-pointer flex-1">
+                                              <input 
+                                                  type="checkbox" 
+                                                  checked={isGroupSelected}
+                                                  ref={input => { if (input) input.indeterminate = isGroupPartiallySelected; }}
+                                                  onChange={(e) => handleSelectGroupMembers('unassigned', e.target.checked)}
+                                                  className="w-5 h-5 text-blue-600 rounded border-stone-300 focus:ring-blue-500"
+                                              />
+                                              <span className="font-bold text-stone-800">غير منضمين لمجموعات</span>
+                                          </label>
+                                          <button 
+                                              onClick={() => toggleGroupSelectionExpand('unassigned')}
+                                              className="p-1 text-stone-500 hover:bg-stone-200 rounded-md"
+                                          >
+                                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                          </button>
+                                      </div>
+                                      
+                                      {isExpanded && (
+                                          <div className="p-2 space-y-1 bg-white">
+                                              {unassignedMembers.map(member => (
+                                                  <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-stone-50 rounded-lg cursor-pointer">
+                                                      <input 
+                                                          type="checkbox" 
+                                                          checked={selectedMembers.includes(member.id)}
+                                                          onChange={(e) => handleSelectMember(member.id, e.target.checked)}
+                                                          className="w-4 h-4 text-blue-600 rounded border-stone-300 focus:ring-blue-500"
+                                                      />
+                                                      <span className="text-sm text-stone-700">{member.name}</span>
+                                                  </label>
+                                              ))}
+                                          </div>
+                                      )}
+                                  </div>
+                              );
+                          })()}
+                      </div>
+                  </div>
               </div>
 
               <button 
                 onClick={() => setStep('list')}
-                className="w-full bg-blue-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform"
+                disabled={selectedMembers.length === 0}
+                className="w-full bg-blue-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
               >
                   بدء التحضير
               </button>
@@ -108,8 +240,6 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
       absent: Object.values(attendance).filter(s => s === 'absent').length,
       excused: Object.values(attendance).filter(s => s === 'excused').length,
   };
-
-  const unassignedMembers = members.filter(m => !m.groupId);
 
   return (
     <div className="flex flex-col h-full bg-stone-50 pb-20">
@@ -144,7 +274,7 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
           
           {/* GROUPS */}
           {groups.map(group => {
-              const groupMembers = members.filter(m => m.groupId === group.id);
+              const groupMembers = members.filter(m => m.groupId === group.id && selectedMembers.includes(m.id));
               if (groupMembers.length === 0) return null;
               
               const isCollapsed = collapsedGroups[group.id];
@@ -218,7 +348,7 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
           })}
 
           {/* UNASSIGNED MEMBERS */}
-          {unassignedMembers.length > 0 && (
+          {unassignedMembers.filter(m => selectedMembers.includes(m.id)).length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-stone-300 overflow-hidden">
                   <div className="bg-stone-200 px-3 py-2 border-b border-stone-300">
                       <h3 className="font-bold text-stone-700 text-sm">غير منضمين لمجموعات</h3>
@@ -230,7 +360,7 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
                                 <div className="w-12 text-center">غائب</div>
                                 <div className="w-12 text-center">عذر</div>
                         </div>
-                      {unassignedMembers.map(member => (
+                      {unassignedMembers.filter(m => selectedMembers.includes(m.id)).map(member => (
                         <div key={member.id} className="flex items-center py-0.5 text-sm hover:bg-stone-50">
                             <div className="flex-1 px-3 py-2 font-medium text-stone-800 text-xs truncate">
                                 {member.name}
