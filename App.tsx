@@ -14,6 +14,7 @@ function App() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [sessions, setSessions] = useState<MeetingSession[]>([]);
   const [settings, setSettings] = useState<AppSettings>(Storage.getSettings());
+  const [editingSession, setEditingSession] = useState<MeetingSession | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -39,7 +40,13 @@ function App() {
   };
 
   const handleSaveSession = (newSession: MeetingSession) => {
-    const updatedSessions = [...sessions, newSession];
+    let updatedSessions;
+    if (editingSession) {
+      updatedSessions = sessions.map(s => s.id === newSession.id ? newSession : s);
+      setEditingSession(null);
+    } else {
+      updatedSessions = [...sessions, newSession];
+    }
     setSessions(updatedSessions);
     Storage.saveSessions(updatedSessions);
   };
@@ -48,6 +55,11 @@ function App() {
     const updatedSessions = sessions.filter(s => s.id !== sessionId);
     setSessions(updatedSessions);
     Storage.saveSessions(updatedSessions);
+  };
+
+  const handleEditSession = (session: MeetingSession) => {
+    setEditingSession(session);
+    setCurrentTab('attendance');
   };
 
   const handleUpdateSettings = (newSettings: AppSettings) => {
@@ -69,14 +81,15 @@ function App() {
           <Members 
             members={members} 
             groups={groups}
+            sessions={sessions}
             onUpdateMembers={handleUpdateMembers} 
             onUpdateGroups={handleUpdateGroups}
           />
         );
       case 'attendance':
-        return <Attendance members={members} groups={groups} onSaveSession={handleSaveSession} />;
+        return <Attendance members={members} groups={groups} onSaveSession={handleSaveSession} initialSession={editingSession} onCancelEdit={() => { setEditingSession(null); setCurrentTab('archive'); }} onUpdateMembers={handleUpdateMembers} />;
       case 'archive':
-        return <Archive sessions={sessions} members={members} groups={groups} settings={settings} onDeleteSession={handleDeleteSession} />;
+        return <Archive sessions={sessions} members={members} groups={groups} settings={settings} onDeleteSession={handleDeleteSession} onEditSession={handleEditSession} />;
       case 'settings':
         return <Settings settings={settings} onSaveSettings={handleUpdateSettings} onDataRestored={handleDataRestore} />;
       default:
@@ -85,7 +98,12 @@ function App() {
   };
 
   return (
-    <Layout activeTab={currentTab} onTabChange={setCurrentTab} settings={settings}>
+    <Layout activeTab={currentTab} onTabChange={(tab) => {
+      if (tab !== 'attendance') {
+        setEditingSession(null);
+      }
+      setCurrentTab(tab);
+    }} settings={settings}>
       {renderContent()}
     </Layout>
   );
