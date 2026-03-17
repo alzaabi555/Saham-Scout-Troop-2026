@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp, Trash2, Calendar, Printer, FileDown, Loader2, X, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Calendar, Printer, FileDown, Loader2, X, FileText, Edit2 } from 'lucide-react';
 import { Member, MeetingSession, AppSettings, Group } from '../types';
 
 interface ArchiveProps {
@@ -9,9 +9,10 @@ interface ArchiveProps {
   groups: Group[];
   settings: AppSettings;
   onDeleteSession: (sessionId: string) => void;
+  onEditSession: (session: MeetingSession) => void;
 }
 
-const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, onDeleteSession }) => {
+const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, onDeleteSession, onEditSession }) => {
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -41,7 +42,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
   const unassignedMembers = members.filter(m => !m.groupId);
   
   // Calculate total columns
-  const totalColumns = 2 + sessionsToPrint.length + 2;
+  const totalColumns = 2 + sessionsToPrint.length + 3;
 
   let globalIndex = 0;
 
@@ -99,9 +100,21 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
   const renderMemberRows = (memberList: Member[]) => {
       return memberList.map((m) => {
           globalIndex++;
-          const presentCount = sessionsToPrint.filter(s => getStatus(s, m.id) === 'present').length;
-          // Calculate percentage based on displayed sessions
-          const percent = sessionsToPrint.length > 0 ? Math.round((presentCount / sessionsToPrint.length) * 100) : 0;
+          let presentCount = 0;
+          let selectedCount = 0;
+
+          sessionsToPrint.forEach(s => {
+              const status = getStatus(s, m.id);
+              if (status !== '-') {
+                  selectedCount++;
+                  if (status === 'present') {
+                      presentCount++;
+                  }
+              }
+          });
+
+          // Calculate percentage based on sessions they were selected for
+          const percent = selectedCount > 0 ? Math.round((presentCount / selectedCount) * 100) : 0;
           
           return (
             <tr key={m.id} className="odd:bg-white even:bg-stone-50" style={{ height: '24px' }}>
@@ -112,6 +125,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                     {getStatus(s, m.id) === 'present' ? '✓' : getStatus(s, m.id) === 'absent' ? '✕' : getStatus(s, m.id) === 'excused' ? 'ع' : '-'}
                   </td>
               ))}
+              <td className="border border-stone-300 p-1 text-center font-bold text-[10px]">{selectedCount}</td>
               <td className="border border-stone-300 p-1 text-center font-bold text-[10px]">{presentCount}</td>
               <td className="border border-stone-300 p-1 text-center font-bold bg-stone-100 text-[10px]">{percent}%</td>
             </tr>
@@ -160,6 +174,15 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                     </div>
                     
                     <div className="flex items-center gap-2">
+                        {/* Edit Button */}
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onEditSession(session); }}
+                            className="p-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                            title="تعديل السجل"
+                        >
+                            <Edit2 className="w-4 h-4" />
+                        </button>
+
                         {/* Single Print Button */}
                         <button 
                             onClick={(e) => handlePrintSingle(e, session.id)}
@@ -320,7 +343,8 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                                </div>
                         </th>
                       ))}
-                      <th className="border border-stone-300 p-1 w-8 bg-stone-100">ح</th>
+                      <th className="border border-stone-300 p-1 w-8 bg-stone-100" title="مجموع الجلسات المختارة">م</th>
+                      <th className="border border-stone-300 p-1 w-8 bg-stone-100" title="حضور">ح</th>
                       <th className="border border-stone-300 p-1 w-10 bg-stone-100">%</th>
                     </tr>
                   </thead>
@@ -360,6 +384,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
                   <div className="flex items-center"><span className="text-green-700 font-bold ml-1">✓</span> حاضر</div>
                   <div className="flex items-center"><span className="text-red-600 font-bold ml-1">✕</span> غائب</div>
                   <div className="flex items-center"><span className="text-amber-600 font-bold ml-1">ع</span> عذر</div>
+                  <div className="flex items-center"><span className="font-bold ml-1 text-stone-800">م</span> مجموع الجلسات المختارة</div>
                 </div>
               </>
             ) : (

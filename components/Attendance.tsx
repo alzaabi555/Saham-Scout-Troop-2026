@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Calendar, Check, X, AlertTriangle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Calendar, Check, X, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, ArrowRight, Plus, UserPlus } from 'lucide-react';
 import { Member, MeetingSession, AttendanceRecord, AttendanceStatus, Group } from '../types';
 import { generateId } from '../utils/storage';
 
@@ -7,26 +7,44 @@ interface AttendanceProps {
   members: Member[];
   groups: Group[];
   onSaveSession: (session: MeetingSession) => void;
+  initialSession?: MeetingSession | null;
+  onCancelEdit?: () => void;
+  onUpdateMembers?: (members: Member[]) => void;
 }
 
-const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession }) => {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [topic, setTopic] = useState('');
+const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession, initialSession, onCancelEdit, onUpdateMembers }) => {
+  const [date, setDate] = useState(initialSession ? initialSession.date : new Date().toISOString().split('T')[0]);
+  const [topic, setTopic] = useState(initialSession ? initialSession.topic : '');
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [step, setStep] = useState<'details' | 'list'>('details');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [isGroupExpanded, setIsGroupExpanded] = useState<Record<string, boolean>>({});
 
-  // Initialize selectedMembers with all members initially
-  useEffect(() => {
-    setSelectedMembers(members.map(m => m.id));
-  }, [members]);
+  const [isAddingNewMember, setIsAddingNewMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberGroupId, setNewMemberGroupId] = useState<string>('');
 
-  // Initialize attendance with 'present' for selected members
+  // Initialize selectedMembers
+  useEffect(() => {
+    if (initialSession) {
+        setSelectedMembers(initialSession.records.map(r => r.memberId));
+    } else {
+        setSelectedMembers(members.map(m => m.id));
+    }
+  }, [members, initialSession]);
+
+  // Initialize attendance
   useEffect(() => {
     setAttendance(prev => {
         const next = { ...prev };
+        
+        if (initialSession) {
+            initialSession.records.forEach(r => {
+                next[r.memberId] = r.status;
+            });
+        }
+
         members.forEach(m => {
             if (selectedMembers.includes(m.id)) {
                 if (!next[m.id]) next[m.id] = 'present'; 
@@ -36,7 +54,7 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
         });
         return next;
     });
-  }, [members, selectedMembers]);
+  }, [members, selectedMembers, initialSession]);
 
   const handleStatusChange = (memberId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [memberId]: status }));
@@ -69,6 +87,26 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
 
   const unassignedMembers = members.filter(m => !m.groupId);
 
+  const handleAddNewMember = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newMemberName.trim() || !onUpdateMembers) return;
+      
+      const newMember: Member = {
+          id: generateId(),
+          name: newMemberName.trim(),
+          joinDate: new Date().toISOString(),
+          groupId: newMemberGroupId || undefined
+      };
+      
+      onUpdateMembers([...members, newMember]);
+      setSelectedMembers(prev => [...prev, newMember.id]);
+      setNewMemberName('');
+      setIsAddingNewMember(false);
+      
+      const groupToExpand = newMemberGroupId || 'unassigned';
+      setIsGroupExpanded(prev => ({...prev, [groupToExpand]: true}));
+  };
+
   const handleSave = () => {
     const records: AttendanceRecord[] = Object.entries(attendance).map(([memberId, status]) => ({
       memberId,
@@ -76,16 +114,22 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
     }));
 
     onSaveSession({
-      id: generateId(),
+      id: initialSession ? initialSession.id : generateId(),
       date,
       topic,
       records
     });
     
-    // Reset
-    setStep('details');
-    setTopic('');
-    alert('تم حفظ الحضور بنجاح');
+    // Reset if not editing
+    if (!initialSession) {
+        setStep('details');
+        setTopic('');
+        setSelectedMembers(members.map(m => m.id));
+    }
+    alert(initialSession ? 'تم تعديل السجل بنجاح' : 'تم حفظ الحضور بنجاح');
+    if (initialSession && onCancelEdit) {
+        onCancelEdit();
+    }
   };
 
   if (members.length === 0) {
@@ -102,7 +146,15 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
   if (step === 'details') {
       return (
           <div className="space-y-6">
-              <h2 className="text-xl font-bold text-stone-800">بيانات الجلسة</h2>
+              <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-stone-800">{initialSession ? 'تعديل بيانات الجلسة' : 'بيانات الجلسة'}</h2>
+                  {initialSession && onCancelEdit && (
+                      <button onClick={onCancelEdit} className="text-sm text-stone-500 hover:text-stone-800 flex items-center gap-1">
+                          <X className="w-4 h-4" />
+                          إلغاء التعديل
+                      </button>
+                  )}
+              </div>
               
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 space-y-4">
                   <div>
@@ -220,6 +272,51 @@ const Attendance: React.FC<AttendanceProps> = ({ members, groups, onSaveSession 
                               );
                           })()}
                       </div>
+                      
+                      {onUpdateMembers && (
+                          <div className="mt-6 pt-4 border-t border-stone-200">
+                              {!isAddingNewMember ? (
+                                  <button 
+                                      type="button"
+                                      onClick={() => setIsAddingNewMember(true)}
+                                      className="w-full py-3 border-2 border-dashed border-stone-300 rounded-xl text-stone-500 font-bold flex items-center justify-center gap-2 hover:bg-stone-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                                  >
+                                      <UserPlus className="w-5 h-5" />
+                                      تسجيل فرد جديد وإضافته للجلسة
+                                  </button>
+                              ) : (
+                                  <form onSubmit={handleAddNewMember} className="bg-blue-50 p-4 rounded-xl border border-blue-100 animate-fade-in">
+                                      <h4 className="font-bold text-blue-800 mb-3 text-sm">تسجيل فرد جديد</h4>
+                                      <div className="space-y-3">
+                                          <input 
+                                              type="text"
+                                              value={newMemberName}
+                                              onChange={e => setNewMemberName(e.target.value)}
+                                              placeholder="اسم الفرد الرباعي..."
+                                              className="w-full p-3 rounded-lg border border-blue-200 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                              autoFocus
+                                          />
+                                          <select 
+                                              value={newMemberGroupId}
+                                              onChange={e => setNewMemberGroupId(e.target.value)}
+                                              className="w-full p-3 rounded-lg border border-blue-200 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                          >
+                                              <option value="">بدون مجموعة (غير منضم)</option>
+                                              {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                          </select>
+                                          <div className="flex gap-2 pt-1">
+                                              <button type="submit" className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-transform">
+                                                  حفظ وإضافة
+                                              </button>
+                                              <button type="button" onClick={() => setIsAddingNewMember(false)} className="px-4 bg-white text-stone-600 border border-stone-200 rounded-lg text-sm font-bold active:scale-95 transition-transform">
+                                                  إلغاء
+                                              </button>
+                                          </div>
+                                      </div>
+                                  </form>
+                              )}
+                          </div>
+                      )}
                   </div>
               </div>
 

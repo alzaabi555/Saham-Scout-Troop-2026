@@ -1,22 +1,24 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Trash2, User, Upload, Users, MoreVertical, X, Check } from 'lucide-react';
-import { Member, Group } from '../types';
+import { Plus, Trash2, User, Upload, Users, MoreVertical, X, Check, BarChart2 } from 'lucide-react';
+import { Member, Group, MeetingSession } from '../types';
 import { generateId } from '../utils/storage';
 
 interface MembersProps {
   members: Member[];
   groups: Group[];
+  sessions: MeetingSession[];
   onUpdateMembers: (members: Member[]) => void;
   onUpdateGroups: (groups: Group[]) => void;
 }
 
-const Members: React.FC<MembersProps> = ({ members, groups, onUpdateMembers, onUpdateGroups }) => {
+const Members: React.FC<MembersProps> = ({ members, groups, sessions, onUpdateMembers, onUpdateGroups }) => {
   const [newMemberName, setNewMemberName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   
   // State to track where we are adding a member (null = closed, 'unassigned' = no group, groupId = specific group)
   const [addingMemberTo, setAddingMemberTo] = useState<string | 'unassigned' | null>(null);
   const [isAddingGroup, setIsAddingGroup] = useState(false);
+  const [statsMemberId, setStatsMemberId] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -114,8 +116,82 @@ const Members: React.FC<MembersProps> = ({ members, groups, onUpdateMembers, onU
       }
   });
 
+  const renderMemberStats = () => {
+    if (!statsMemberId) return null;
+    const member = members.find(m => m.id === statsMemberId);
+    if (!member) return null;
+
+    let totalSessions = 0;
+    let present = 0;
+    let absent = 0;
+    let excused = 0;
+
+    sessions.forEach(session => {
+      const record = session.records.find(r => r.memberId === statsMemberId);
+      if (record) {
+        totalSessions++;
+        if (record.status === 'present') present++;
+        else if (record.status === 'absent') absent++;
+        else if (record.status === 'excused') excused++;
+      }
+    });
+
+    const attendanceRate = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 0;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl animate-fade-in">
+          <div className="bg-blue-900 p-4 flex justify-between items-center text-white">
+            <h3 className="font-bold text-lg">إحصائيات الجوال</h3>
+            <button onClick={() => setStatsMemberId(null)} className="text-blue-200 hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-2xl font-bold mx-auto mb-3">
+                {member.name.charAt(0)}
+              </div>
+              <h4 className="font-bold text-xl text-stone-800">{member.name}</h4>
+              <p className="text-stone-500 text-sm mt-1">
+                {member.groupId ? groups.find(g => g.id === member.groupId)?.name : 'غير منضم لمجموعة'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-stone-50 p-3 rounded-xl border border-stone-100 text-center">
+                <span className="block text-2xl font-bold text-stone-800">{totalSessions}</span>
+                <span className="text-xs text-stone-500 font-medium">إجمالي الجلسات</span>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
+                <span className="block text-2xl font-bold text-blue-700">{attendanceRate}%</span>
+                <span className="text-xs text-blue-600 font-medium">نسبة الحضور</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                <span className="text-green-800 font-medium">حضور</span>
+                <span className="font-bold text-green-700 text-lg">{present}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100">
+                <span className="text-red-800 font-medium">غياب</span>
+                <span className="font-bold text-red-700 text-lg">{absent}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl border border-amber-100">
+                <span className="text-amber-800 font-medium">استئذان</span>
+                <span className="font-bold text-amber-700 text-lg">{excused}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 pb-20">
+      {renderMemberStats()}
       
       {/* Header Actions */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 sticky top-0 z-10 flex flex-col gap-3">
@@ -206,9 +282,14 @@ const Members: React.FC<MembersProps> = ({ members, groups, onUpdateMembers, onU
                                     </div>
                                     <span className="text-sm font-medium text-stone-700">{member.name}</span>
                                 </div>
-                                <button onClick={() => handleDeleteMember(member.id)} className="text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setStatsMemberId(member.id)} className="text-stone-300 hover:text-blue-500 p-1" title="إحصائيات">
+                                        <BarChart2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteMember(member.id)} className="text-stone-300 hover:text-red-500 p-1" title="حذف">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
 
@@ -290,9 +371,14 @@ const Members: React.FC<MembersProps> = ({ members, groups, onUpdateMembers, onU
                     unassignedMembers.map(member => (
                         <div key={member.id} className="bg-white p-2 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
                              <span className="text-sm font-medium text-stone-700 px-2">{member.name}</span>
-                             <button onClick={() => handleDeleteMember(member.id)} className="text-stone-300 hover:text-red-500 p-1">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                             <div className="flex items-center gap-1">
+                                 <button onClick={() => setStatsMemberId(member.id)} className="text-stone-300 hover:text-blue-500 p-1" title="إحصائيات">
+                                     <BarChart2 className="w-4 h-4" />
+                                 </button>
+                                 <button onClick={() => handleDeleteMember(member.id)} className="text-stone-300 hover:text-red-500 p-1" title="حذف">
+                                     <Trash2 className="w-4 h-4" />
+                                 </button>
+                             </div>
                         </div>
                     ))
                 )}
