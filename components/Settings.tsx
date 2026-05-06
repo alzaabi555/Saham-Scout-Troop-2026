@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Save, Upload, User, Flag, Trash2, Download, FileJson, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 import { AppSettings } from '../types';
 import { Storage } from '../utils/storage';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -51,20 +54,44 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSaveSettings, onDataRes
 
   // --- Backup Functions ---
 
-  const handleExportBackup = () => {
-    const data = Storage.getFullBackup();
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    const date = new Date().toISOString().split('T')[0];
-    link.download = `saham_scout_backup_${date}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleExportBackup = async () => {
+    try {
+      const data = Storage.getFullBackup();
+      const jsonString = JSON.stringify(data, null, 2);
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `saham_scout_backup_${date}.json`;
+
+      if (Capacitor.isNativePlatform()) {
+        // Use Capacitor and Filesystem for iOS/Android
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8
+        });
+
+        await Share.share({
+          title: 'النسخة الاحتياطية',
+          text: 'ملف النسخة الاحتياطية لتطبيق كشافة السهم',
+          url: result.uri,
+          dialogTitle: 'حفظ النسخة الاحتياطية'
+        });
+      } else {
+        // Fallback for Web/Browser
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      alert("حدث خطأ أثناء محاولة تصدير النسخة الاحتياطية");
+    }
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,7 +281,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSaveSettings, onDataRes
                 type="file" 
                 ref={backupInputRef}
                 onChange={handleImportBackup}
-                accept=".json"
+                accept="application/json,.json,text/plain"
                 className="hidden"
               />
           </div>
