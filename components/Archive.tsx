@@ -5,7 +5,8 @@ import { Member, MeetingSession, AppSettings, Group } from '../types';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface ArchiveProps {
   sessions: MeetingSession[];
@@ -72,25 +73,28 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
 
     setTimeout(async () => {
       const element = document.getElementById('print-content-inner');
-      if (!element || !html2pdf) {
-        alert("تعذر تحميل محرك الطباعة");
+      if (!element) {
+        alert("تعذر العثور على محتوى الطباعة");
         setIsProcessing(false);
         return;
       }
 
       const fileName = `تقرير_جوالة_صحم_${new Date().getTime()}.pdf`;
-      const opt = {
-        margin: [10, 5, 10, 5],
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
 
       try {
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        
+        // Calculate standard A4 dimensions
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
         if (Capacitor.isNativePlatform()) {
           // Native Capacitor PDF generation and sharing
-          const pdfDataUrl = await html2pdf().set(opt).from(element).output('datauristring');
+          const pdfDataUrl = pdf.output('datauristring');
           const base64Data = pdfDataUrl.split(',')[1];
           
           const result = await Filesystem.writeFile({
@@ -106,7 +110,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
           });
         } else {
           // Web fallback
-          const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+          const pdfBlob = pdf.output('blob');
           const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
   
           if (navigator.share) {
