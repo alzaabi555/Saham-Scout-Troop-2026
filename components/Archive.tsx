@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronUp, Trash2, Calendar, Printer, FileDown, Loader2, X, FileText, Edit2 } from 'lucide-react';
 import { Member, MeetingSession, AppSettings, Group } from '../types';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 interface ArchiveProps {
   sessions: MeetingSession[];
@@ -61,7 +64,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
       handleSharePDF();
   };
 
-  // --- معالج الطباعة والحفظ المتوافق مع iOS ---
+  // --- معالج الطباعة والحفظ المتوافق مع iOS/Android ---
   const handleSharePDF = async () => {
     setIsProcessing(true);
     setShowPreview(true);
@@ -74,23 +77,54 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
         return;
       }
 
+      const fileName = `تقرير_جوالة_صحم_${new Date().getTime()}.pdf`;
       const opt = {
         margin: [10, 5, 10, 5],
-        filename: `تقرير_جوالة_صحم_${new Date().getTime()}.pdf`,
+        filename: fileName,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
       try {
-        const pdfBlob = await (window as any).html2pdf().set(opt).from(element).output('blob');
-        const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' });
+        if (Capacitor.isNativePlatform()) {
+          // Native Capacitor PDF generation and sharing
+          const pdfDataUrl = await (window as any).html2pdf().set(opt).from(element).output('datauristring');
+          const base64Data = pdfDataUrl.split(',')[1];
+          
+          const result = await Filesystem.writeFile({
+             path: fileName,
+             data: base64Data,
+             directory: Directory.Cache
+          });
 
-        if (navigator.share) {
-          await navigator.share({ files: [file], title: 'تقرير حضور جوالة صحم' });
+          await Share.share({
+             title: 'تقرير جوالة صحم',
+             url: result.uri,
+             dialogTitle: 'حفظ التقرير'
+          });
+        } else {
+          // Web fallback
+          const pdfBlob = await (window as any).html2pdf().set(opt).from(element).output('blob');
+          const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+  
+          if (navigator.share) {
+            await navigator.share({ files: [file], title: 'تقرير حضور جوالة صحم' });
+          } else {
+             // Basic download fallback for browsers lacking share API
+             const url = URL.createObjectURL(pdfBlob);
+             const link = document.createElement('a');
+             link.href = url;
+             link.download = fileName;
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+             URL.revokeObjectURL(url);
+          }
         }
       } catch (err) {
-        console.error(err);
+        console.error("PDF generation or sharing failed:", err);
+        alert("حدث خطأ أثناء إنتاج أو مشاركة التقرير");
       } finally {
         setIsProcessing(false);
       }
