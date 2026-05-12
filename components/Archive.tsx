@@ -5,6 +5,7 @@ import { Member, MeetingSession, AppSettings, Group } from '../types';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import html2pdf from 'html2pdf.js';
 
 interface ArchiveProps {
   sessions: MeetingSession[];
@@ -71,8 +72,8 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
 
     setTimeout(async () => {
       const element = document.getElementById('print-content-inner');
-      if (!element || !(window as any).html2pdf) {
-        alert("جاري تحميل المحرك...");
+      if (!element || !html2pdf) {
+        alert("تعذر تحميل محرك الطباعة");
         setIsProcessing(false);
         return;
       }
@@ -89,7 +90,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
       try {
         if (Capacitor.isNativePlatform()) {
           // Native Capacitor PDF generation and sharing
-          const pdfDataUrl = await (window as any).html2pdf().set(opt).from(element).output('datauristring');
+          const pdfDataUrl = await html2pdf().set(opt).from(element).output('datauristring');
           const base64Data = pdfDataUrl.split(',')[1];
           
           const result = await Filesystem.writeFile({
@@ -105,7 +106,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
           });
         } else {
           // Web fallback
-          const pdfBlob = await (window as any).html2pdf().set(opt).from(element).output('blob');
+          const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
           const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
   
           if (navigator.share) {
@@ -128,7 +129,7 @@ const Archive: React.FC<ArchiveProps> = ({ sessions, members, groups, settings, 
       } finally {
         setIsProcessing(false);
       }
-    }, 800);
+    }, 1200);
   };
 
   const renderMemberRows = (memberList: Member[]) => {
